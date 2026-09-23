@@ -11,10 +11,27 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'] : '*',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow Vercel preview domains, local dev, and custom CLIENT_URL
+    if (!origin || origin.includes('vercel.app') || origin.includes('localhost') || origin === process.env.CLIENT_URL) {
+      return callback(null, true);
+    }
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+app.options('*', cors());
 app.use(express.json());
+
+// Auto-prefix middleware for requests missing /api prefix
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && ['/company', '/stats', '/bills', '/clients'].some(p => req.path.startsWith(p))) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
 
 // In-Memory Resilient DB Store fallback if local MongoDB service is offline
 let isMongoConnected = false;

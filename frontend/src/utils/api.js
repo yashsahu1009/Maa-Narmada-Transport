@@ -1,4 +1,19 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+function getApiBaseUrl() {
+  let envUrl = import.meta.env.VITE_API_URL || '/api';
+  envUrl = envUrl.trim();
+
+  if (envUrl.startsWith('http')) {
+    let cleanUrl = envUrl.replace(/\/+$/, '');
+    if (!cleanUrl.endsWith('/api')) {
+      cleanUrl += '/api';
+    }
+    return cleanUrl;
+  }
+
+  return envUrl;
+}
+
+const API_BASE = getApiBaseUrl();
 
 export async function fetchCompany() {
   const res = await fetch(`${API_BASE}/company`);
