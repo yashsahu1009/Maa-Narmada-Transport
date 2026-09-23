@@ -1,0 +1,8 @@
+{
+  "name": "maa-narmada-transport-root",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npx vite build",
+    "start": "cd backend && npm start"
+  }
+}
