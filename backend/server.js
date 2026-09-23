@@ -369,14 +369,61 @@ function processBillData(body, existingId, existingBiltyNo) {
   };
 }
 
+// Helpers for safe regex & unique ID generation
+function escapeRegex(text = '') {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
+async function generateUniqueBillIdAndNo() {
+  const count = isMongoConnected ? await BillModel.countDocuments() : memoryStore.bills.length;
+  let num = count + 1001;
+  let billId = `BILL-${num}`;
+  const yearSuffix = new Date().getFullYear().toString().slice(-2);
+  let biltyNo = `MNT/${yearSuffix}/${num}`;
+
+  if (isMongoConnected) {
+    while (await BillModel.exists({ $or: [{ id: billId }, { biltyNo: biltyNo }] })) {
+      num++;
+      billId = `BILL-${num}`;
+      biltyNo = `MNT/${yearSuffix}/${num}`;
+    }
+  } else {
+    while (memoryStore.bills.some(b => b.id === billId || b.biltyNo === biltyNo)) {
+      num++;
+      billId = `BILL-${num}`;
+      biltyNo = `MNT/${yearSuffix}/${num}`;
+    }
+  }
+
+  return { billId, biltyNo };
+}
+
+async function generateUniqueClientId() {
+  const count = isMongoConnected ? await ClientModel.countDocuments() : memoryStore.clients.length;
+  let num = count + 101;
+  let clientId = `CLI-${num}`;
+
+  if (isMongoConnected) {
+    while (await ClientModel.exists({ id: clientId })) {
+      num++;
+      clientId = `CLI-${num}`;
+    }
+  } else {
+    while (memoryStore.clients.some(c => c.id === clientId)) {
+      num++;
+      clientId = `CLI-${num}`;
+    }
+  }
+
+  return clientId;
+}
+
 // POST Create Bill
 app.post('/api/bills', async (req, res) => {
   try {
-    const totalCount = isMongoConnected ? await BillModel.countDocuments() : memoryStore.bills.length;
-    const nextNum = totalCount + 1001;
-    const newBillId = req.body.id || `BILL-${nextNum}`;
-    const yearSuffix = new Date().getFullYear().toString().slice(-2);
-    const newBiltyNo = req.body.biltyNo || `MNT/${yearSuffix}/${nextNum}`;
+    const generated = await generateUniqueBillIdAndNo();
+    const newBillId = req.body.id || generated.billId;
+    const newBiltyNo = req.body.biltyNo || generated.biltyNo;
 
     const newBillData = processBillData(req.body, newBillId, newBiltyNo);
 
@@ -384,13 +431,14 @@ app.post('/api/bills', async (req, res) => {
     if (isMongoConnected) {
       savedBill = await BillModel.create(newBillData);
 
-      if (req.body.clientName) {
-        const clientExists = await ClientModel.findOne({ name: new RegExp(`^${req.body.clientName}$`, 'i') });
+      if (req.body.clientName && req.body.clientName.trim()) {
+        const safeName = escapeRegex(req.body.clientName.trim());
+        const clientExists = await ClientModel.findOne({ name: new RegExp(`^${safeName}$`, 'i') });
         if (!clientExists) {
-          const clientCount = await ClientModel.countDocuments();
+          const newClientId = await generateUniqueClientId();
           await ClientModel.create({
-            id: `CLI-${clientCount + 101}`,
-            name: req.body.clientName,
+            id: newClientId,
+            name: req.body.clientName.trim(),
             phone: req.body.clientPhone || '',
             address: req.body.clientAddress || '',
             gstin: req.body.clientGstin || ''
@@ -401,10 +449,11 @@ app.post('/api/bills', async (req, res) => {
       savedBill = newBillData;
       memoryStore.bills.unshift(newBillData);
 
-      if (req.body.clientName && !memoryStore.clients.some(c => c.name.toLowerCase() === req.body.clientName.toLowerCase())) {
+      if (req.body.clientName && !memoryStore.clients.some(c => c.name.toLowerCase() === req.body.clientName.trim().toLowerCase())) {
+        const newClientId = await generateUniqueClientId();
         memoryStore.clients.push({
-          id: `CLI-${memoryStore.clients.length + 101}`,
-          name: req.body.clientName,
+          id: newClientId,
+          name: req.body.clientName.trim(),
           phone: req.body.clientPhone || '',
           address: req.body.clientAddress || '',
           gstin: req.body.clientGstin || ''
@@ -414,7 +463,8 @@ app.post('/api/bills', async (req, res) => {
 
     res.status(201).json(savedBill);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('POST /api/bills Error:', err);
+    res.status(400).json({ error: err.message || 'Failed to create bill' });
   }
 });
 
@@ -439,7 +489,7 @@ app.put('/api/bills/:id', async (req, res) => {
 
     res.json(updatedBill);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -479,22 +529,23 @@ app.get('/api/clients', async (req, res) => {
 app.post('/api/clients', async (req, res) => {
   try {
     const { name, phone, address, gstin } = req.body;
-    if (!name) return res.status(400).json({ error: 'Client name is required' });
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Client name is required' });
 
     let newClient = null;
+    const newClientId = await generateUniqueClientId();
+
     if (isMongoConnected) {
-      const count = await ClientModel.countDocuments();
       newClient = await ClientModel.create({
-        id: `CLI-${count + 101}`,
-        name,
+        id: newClientId,
+        name: name.trim(),
         phone: phone || '',
         address: address || '',
         gstin: gstin || ''
       });
     } else {
       newClient = {
-        id: `CLI-${memoryStore.clients.length + 101}`,
-        name,
+        id: newClientId,
+        name: name.trim(),
         phone: phone || '',
         address: address || '',
         gstin: gstin || ''
@@ -504,7 +555,8 @@ app.post('/api/clients', async (req, res) => {
 
     res.status(201).json(newClient);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('POST /api/clients Error:', err);
+    res.status(400).json({ error: err.message || 'Failed to create client' });
   }
 });
 
