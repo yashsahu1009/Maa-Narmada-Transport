@@ -46,25 +46,17 @@
   @apply glass-card hover:-translate-y-1 hover:border-cyan-400 hover:shadow-[0_10px_30px_rgba(14,165,233,0.2)];
 }
 
-/* Fiery Flame Styled Scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* Completely hide scrollbars visually across all browsers while retaining full scrolling functionality */
+html, body, * {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.75);
-}
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #ff3300 0%, #ff7700 50%, #ffcc00 100%);
-  border-radius: 9999px;
-  border: 2px solid rgba(15, 23, 42, 0.9);
-  box-shadow: 0 0 10px rgba(255, 69, 0, 0.7), inset 0 0 6px rgba(255, 215, 0, 0.9);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-::-webkit-scrollbar-thumb:hover,
-::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(180deg, #ff1100 0%, #ff4500 35%, #ff8c00 70%, #ffea00 100%);
-  box-shadow: 0 0 18px rgba(255, 69, 0, 1), 0 0 32px rgba(255, 140, 0, 0.9);
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 /* Print specific styles */
