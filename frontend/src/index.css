@@ -46,16 +46,25 @@
   @apply glass-card hover:-translate-y-1 hover:border-cyan-400 hover:shadow-[0_10px_30px_rgba(14,165,233,0.2)];
 }
 
-/* Scrollbars */
+/* Fiery Flame Styled Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(15, 23, 42, 0.75);
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-700 rounded-full hover:bg-cyan-500 transition-colors;
+  background: linear-gradient(180deg, #ff3300 0%, #ff7700 50%, #ffcc00 100%);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 10px rgba(255, 69, 0, 0.7), inset 0 0 6px rgba(255, 215, 0, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #ff1100 0%, #ff4500 35%, #ff8c00 70%, #ffea00 100%);
+  box-shadow: 0 0 18px rgba(255, 69, 0, 1), 0 0 32px rgba(255, 140, 0, 0.9);
 }
 
 /* Print specific styles */
